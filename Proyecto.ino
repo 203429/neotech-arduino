@@ -18,8 +18,8 @@ DHT dht(DHTPIN, DHTTYPE);
 // WIFI
 #include <WiFi.h>
 #include <HTTPClient.h>
-const char* ssid = "NetHome";
-const char* password = "VeilHCF02";
+const char* ssid = "Redmi Note 10S";
+const char* password = "VeilHCF3202";
 
 // BOMBA
 #define relay 15
@@ -49,15 +49,18 @@ void setup() {
   pinMode(echoPin, INPUT);
 
   pinMode(relay, OUTPUT);
-  digitalWrite(relay, LOW);
+  digitalWrite(relay, HIGH);
 }
 
 void loop() {
   int r_historial = 0;
-  digitalWrite(relay, LOW);
+  digitalWrite(relay, HIGH);
   lcd.clear();
+  digitalWrite(relay , LOW);
   float t = dht.readTemperature();
   float h = dht.readHumidity();
+
+  digitalWrite(relay, HIGH);
   float h_suelo = analogRead(higrometro);
   float hum_suelo = ((4095 - h_suelo) * 100) / 4095;
 
@@ -87,17 +90,19 @@ void loop() {
   lcd.write(byte(0));
 
   delay(2000);
-
   if (hum_suelo < 40) {
     lcd.clear();
     lcd.setCursor(5, 0);
     lcd.print("Regando");
-    digitalWrite(relay, HIGH);
-    delay(2000);
+    Serial.println("Regando");
     digitalWrite(relay, LOW);
+    delay(2000);
+    digitalWrite(relay, HIGH);
+    delay(1000);
     lcd.clear();
     r_historial = 1;
   } else {
+    digitalWrite(relay, HIGH);
     r_historial = 0;
   }
 
@@ -117,51 +122,51 @@ void loop() {
   lcd.print(n_agua);
   lcd.write(byte(0));
 
-  initWifi();
-  Serial.println(WiFi.localIP());
-
-  HTTPClient http;
-  http.begin("http://192.168.0.28/neotech/valores");
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  http.addHeader("Authorization", "Token a265b8045425c67eb7f585e2434080e65ecc582e");
-  String text = "temp_ambiente=" + String(t) + "&humedad_ambiente=" + String(h) + "&humedad_suelo=" + String(hum_suelo) + "&nivel_agua=" + String(n_agua);
-
-  int resp = http.POST(text);
-  if (resp > 0) {
-    Serial.println("Código HTTP ► " + String(resp));
-    if (resp == 200) {
-      String response = http.getString();
-      Serial.println("El servidor respondió ▼ ");
-      Serial.println(response);
-    }
-  } else {
-    Serial.println("Error al enviar post, codigo:");
-    Serial.println(resp);
-  }
-  http.end();
-
-  if (r_historial = 1) {
+    initWifi();
+    Serial.println(WiFi.localIP());
+  
     HTTPClient http;
-    http.begin("http://192.168.0.28/neotech/riego");
+    http.begin("http://192.168.198.18/neotech/valores");
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     http.addHeader("Authorization", "Token a265b8045425c67eb7f585e2434080e65ecc582e");
-    String text = "tipo=Automático";
-
+    String text = "temp_ambiente=" + String(t) + "&humedad_ambiente=" + String(h) + "&humedad_suelo=" + String(hum_suelo) + "&nivel_agua=" + String(n_agua);
+    
     int resp = http.POST(text);
     if (resp > 0) {
       Serial.println("Código HTTP ► " + String(resp));
       if (resp == 200) {
         String response = http.getString();
-        Serial.println("El servidor respondió ▼2 ");
+        Serial.println("El servidor respondió ▼ ");
         Serial.println(response);
       }
     } else {
-      Serial.println("Error al enviar post, codigo2:");
+      Serial.println("Error al enviar post, codigo:");
       Serial.println(resp);
     }
     http.end();
-  }
-  WiFi.disconnect(true);
+  
+    if (r_historial == 1) {
+      HTTPClient http;
+      http.begin("http://192.168.198.18/neotech/riego");
+      http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      http.addHeader("Authorization", "Token a265b8045425c67eb7f585e2434080e65ecc582e");
+      String text = "tipo=Automático";
+  
+      int resp = http.POST(text);
+      if (resp > 0) {
+        Serial.println("Código HTTP ► " + String(resp));
+        if (resp == 200) {
+          String response = http.getString();
+          Serial.println("El servidor respondió ▼2 ");
+          Serial.println(response);
+        }
+      } else {
+        Serial.println("Error al enviar post, codigo2:");
+        Serial.println(resp);
+      }
+      http.end();
+    }
+    WiFi.disconnect(true);
 }
 
 void initWifi() {
